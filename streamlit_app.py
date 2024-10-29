@@ -1,5 +1,5 @@
 import streamlit as st
-
+st.set_page_config(page_title="IOI Replication")
 st.title("Replicating Interpretability in the Wild")
 st.caption("We find a circuit in GPT-2 small that performs the Indirect Object Identification (IOI) task.")
 
