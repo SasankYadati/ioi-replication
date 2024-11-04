@@ -165,8 +165,49 @@ st.write("""The plot suggests that model writes the correct answer to the residu
          layers 7 to 9. Makes sense to watch out for these layers in the rest of our exploration.""")
 
 st.subheader("Layer Attribution")
+st.write("""
+We will now do logit attribution for output of each layer instead of accumulated residual stream value at that layer.
+""")
+
+st.image("layer_attribution.png")
+
+st.write("""
+We observe that only the attention layers matter suggesting that the task primarily involves
+         moving information around. Further, we see layer 9 attention is improves the task performance
+         while attention layers 10 and 11 decrease the performance a bit.
+""")
+
 st.subheader("Head Attribution")
+st.write("""We can further attribute the logit difference to individual heads by decomposing the 
+         the attention layer's output into a sum of outputs of each head.""")
+
+st.image("head_attribution.png")
+
+st.write(
+    """
+    This is a sparse matrix showing that only a few heads matter. Specifically, heads 9.6 and 9.9 seem
+    to contribute a lot positively to the logit difference while heads 10.7 and 11.10 contribute a lot 
+    negatively.
+    These heads actually correspond to some of the name mover and negative name mover heads as discussed 
+    in the paper.
+    """
+)
+
 st.subheader("Attention Analysis")
+st.image("positive_attention_head_pattern.jpg")
+st.write(
+    """
+    Attention patterns can be useful to visualize as they tell us what positions the information moves 
+    from and to. Since, we are looking at the logit differences at the final sequence position, we only need
+    to look at the attention pattern for the final token (in this case, "to").
+
+    For the final token, there's a significant density on the position corresponding to the Indirect Object 
+    "John" suggesting that this head maybe responsible for moving the indirect object to the final position.
+
+    Although, this is speculative at this point because the residual stream at layer 9 at the "John"'s position  
+    might not necessarily contain information about the token "John".
+    """
+)
 
 st.header("Activation Patching")
 st.subheader("Noising vs Denoising")
