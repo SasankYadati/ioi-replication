@@ -120,11 +120,50 @@ def logits_to_ave_logit_diff(
 st.image("logit_differences.jpg")
 
 st.subheader("Initial Hypothesis")
+st.write("It's useful to have some hypthosis of how the model might be doing the task before we \
+         do any experiments. \
+         My hypothesis: Consider the example 'When John and Mary went to the shops, John gave the bag to ->  Mary'\
+         The model detects the second John token as a duplicate and a later attention head moves information of Mary to the last position \
+         (where the next token prediction is made).")
 
 st.header("Logit Attribution")
 
 st.subheader("Direction Logit Attribution")
+st.markdown("""Idea: work backwards starting from the model's output
+* The central object of a transformer is the residual stream, which is the sum of each layer's output, token embedding and positional embedding
+* The logits are approximately a linear function of the final residual stream value:
+    - logits = Unembed(LayerNorm(final_residual_stream_value))
+    - LayerNorm isn't technically linear so logits are technically not a linear function of the residual stream.
+* Each attention layer's output can be broken down into sum of the output of each attention head in the layer
+* Each MLP layer's output can be broken down into sum of the output of each neuron and a bias term.
+* Therefore, we can decompose the logits into the sum of contributions of each component and look at which components contribute the most to the logit of the correct token
+    - Components: attention head, mlp neuron, token embedding, position embedding""")
+
+st.markdown("""
+            We will use the logit differnce between the correct token (IO) and incorrect token (S) as this controls for different things the model might be doing. For example, the model might want to predict a pronoun instead of a name.
+            Since we repeat each prompt twice for each possible IO name, we also control for any biases the model have in predicting some names more frequently than the others.
+            
+            $$ \\text{logit diff} = (x^T W_U)_{IO} - (x^T W_U)_S = x^T (u_{IO} - u_{S})$$
+
+            where $W_U$ is unembedding matrix, $x$ is the final residual stream value for a single sequence for the final position,
+            $u_{IO}$ is the column of $W_U$ corresponding to the correct token, and $u_S$ is the column for the incorrect token. 
+            $u_{IO} - u_{S}$ corresponds to the logit difference direction. We will use this term below.  
+""")
+
 st.subheader("Logit Lens")
+st.write("""
+        In this technique, we look at the residual stream after each layer
+        and calculate the logit difference from that.
+
+        At each layer, we calculate the logit difference using the residual stream value at that layer, apply layer norm, multiply it with
+        the logit difference direction (as if the model didn't have further layers).
+         """)
+
+st.image("logit_lens.png")
+
+st.write("""The plot suggests that model writes the correct answer to the residual stream somewhere in
+         layers 7 to 9. Makes sense to watch out for these layers in the rest of our exploration.""")
+
 st.subheader("Layer Attribution")
 st.subheader("Head Attribution")
 st.subheader("Attention Analysis")
