@@ -210,11 +210,138 @@ st.write(
 )
 
 st.header("Activation Patching")
-st.subheader("Noising vs Denoising")
+st.write(
+    """
+    The attribution techniques above only look at the end of the circuit that directly affect the logits.
+    As that is not enough, we will now look at activation patching, where we take activations from one run of the model
+    and patch them into another run.
+
+    We form a clean and corrupted input that are as close as possilble except for the key detail of the
+    Indirect Object. This lets us control for as many of the shared circuits as possible. Then, by patching
+    in activations from one run to another, we will not affect the many shared circuits, isolating the 
+    circuit we care about.
+
+    We have already tried to control for shared circuits by taking the logit difference.
+    """
+)
+st.subheader("Causal Tracing (Denoising) vs Resample ablation (Noising)")
+st.markdown(
+    """
+    **Causal Tracing** involves patching in clean activations into a corrupted run. The goal is find
+    the activations that are *sufficient* to recover clean performance in the context of the circuits
+    we care about. Example: If we can patch a head from "The Eiffel Tower is in" (clean input) to 
+    "The Colosseum is in" (corrupted input) and flip the answer from Rome to Paris,
+    that seems like strong evidence that that head contained the key information
+    about the input being the Eiffel Tower.
+    * Causal tracing helps in finding activations sufficient for the task.
+    * If there is a circuit calculating A OR B, causal tracing can tell us for both A and B that they are
+    sufficient on their own.
+    * It is important to keep in mind that in our application of this method are we really causing clean
+    performance or just breaking the corrupted performance.
+    """
+)
+st.markdown(
+    """
+    **Resample ablation** does patching the other way around by replacing activations in clean run with
+    corrupted activations. It helps find activations that are necessary for good clean performance in the context
+    of the circuits we care about. The point is to break the performance on the clean run.
+    * If the model has redundancy, we may see nothing is necessary.
+    * If there is a circuit calculating A AND B, it tells us that each of A, B being removed will kill
+    the performance.
+    * This patching need not be from corrupted activations on some prompt, it could also be zero ablation, mean
+    ablation, adding gaussian noise etc.
+    * The broken performance is better if it's because we have isolated the necessary circuit components
+    and not because of uninteresting reasons (eg: throwing the model off-distribution by zero ablation).
+    """
+)
+
+st.write(
+    """
+    The results of denoising are considered stronger because:
+    * Showing a set of components is sufficient for a task is a big deal.
+    * Increase in loss due to zero ablation need not mean the component was important.
+
+    In our patching experiments, the clean run is on original inputs (eg: "When Mary and John went to the store, John gave a drink to")
+    and the corrupted run is on the same inputs with the subject token flipped (eg: "When Mary and John went to the store, Mary gave a drink to")
+    """
+)
+
 st.subheader("IOI Metric")
+st.write(
+    """
+    We will be denoising. So, it makes sense to choose a metric with a value of zero to mean no change
+    from the corrupted performance and a value of one to mean clean performance has been completely recovered.
+    We will have the metric be a linear function of the logit difference.
+
+    For example, if we patched in the entire clean prompt, we'd get a value of one. If we don't patch at all,
+    we'd get a value of zero.
+    """
+)
+
+st.code(
+    """
+    (patched_logit_diff - corrupted_logit_diff) / (clean_logit_diff - corrupted_logit_diff)
+    """
+)
+
 st.subheader("Residual Stream Patching")
+st.markdown(
+    """
+    Let's start with patching in the residual stream at the start of each layer (aka resid_pre) and for
+    each token position. 
+    """
+)
+st.code(
+    """
+    act_patch_resid_pre = patching.get_act_patch_resid_pre(
+        model = model,
+        corrupted_tokens = corrupted_tokens,
+        clean_cache = clean_cache,
+        patching_metric = ioi_metric
+    )
+    """
+)
+st.image("activation_patching_figures/resid_pre.png")
+st.markdown(
+    """
+    * The computation by components sufficient for this task seem to be highly localised to two positions
+    in the residual stream: S2 token and final token.
+    * It seems around layer 8, the information sufficient to predict IO over S is moved from
+    S2 token to final token.
+    """
+)
+
 st.subheader("Residual Stream Patching per block")
+st.markdown(
+    """
+    We can also try patching in the residual stream just after the attention layer (attn_out) 
+    or just after the MLP (mlp_out) along with resid_pre as above.
+    """
+)
+st.image("activation_patching_figures/resid_pre_attn_out_mlp_out.png")
+st.markdown(
+    """
+    * Several attention layers are significant, early layers matter on S2 token and layer layers on END token
+    * Attention layers 7 and 8 seem to matter, possibly responsible for moving information from S2 to END.
+    * MLP layers don't seem to matter much, with an exception: MLP 0
+        - MLP 0 apparently is generally important for GPT-2 small, not specific to IOI
+    """
+)
+
 st.subheader("Attention Head Patching")
+st.markdown(
+    """
+    We can further zoom in and patch individual attention head outputs.
+    """
+)
+st.image("activation_patching_figures/attn_head_out.png")
+st.markdown(
+    """
+    * Some heads we have seen in logit attribution come up here as relevant: 9.9 and 10.7
+    * Other heads also show up as relevant: 3.0, 5.5, 6.9, 7.3, 7.9, 8.6, 8.10
+    """
+n 
+
 st.subheader("Decomposing Attention Heads")
 st.subheader("What we have learned so far")
 
