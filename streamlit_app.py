@@ -340,7 +340,7 @@ st.markdown(
     * Some heads we have seen in logit attribution come up here as relevant: 9.9 and 10.7
     * Other heads also show up as relevant: 3.0, 5.5, 6.9, 7.3, 7.9, 8.6, 8.10
     """
-n 
+)
 
 st.subheader("Decomposing Attention Heads")
 st.subheader("What we have learned so far")
