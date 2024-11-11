@@ -343,7 +343,53 @@ st.markdown(
 )
 
 st.subheader("Decomposing Attention Heads")
+st.markdown(
+    """
+    We can understand the behavior of the relevant heads even more by decomposing heads. Recall that an attention
+    head consists of two weakly-independent operations: 
+    1. Calculating where to move information from and to. This is represented by the attention pattern of the head
+    and implemented by the QK-circuit.
+    2. Caalculating what information to move. This is represented by the value vector and implemented by the OV
+    circuit.
+    The idea is to patch one of these in and figure out which ones are important to the task at hand.
+    """
+)
+st.image("activation_patching_figures/decomposed_attn_head.png")
+st.markdown(
+    """
+    * Earlier layers' heads seem to matter because of their attention patterns and query vectors: 3.0, 5.5, 6.9
+    * Middle layers' heads seem to matter because of their value vectors: 7.3, 7.9, 8.6, 8.10
+        * See below the attention pattern for the head 8.6 
+        * Key patching isn't important for these heads, so END would probably attend to S2 regardless of what's in it.
+        * Value patching is important so the identity of S2 gets moved from S2 to END.
+    * Later layers' heads seem to matter because of their query vectors: 9.9, 10.0
+    """
+)
+with st.expander("See attention pattern for attention head 8.6"):
+    st.write(
+        """
+        The attention head can be seen attending from END to S2, 
+        so it might be responsible for moving information from S2 to END helping determine the answer.
+        """)
+    st.image("activation_patching_figures/attn_head_pattern_8_6.png")
+        
+
 st.subheader("What we have learned so far")
+
+st.markdown(
+    """
+    * By logit difference attribution on attention heads, we found that heads 9.6, 9.9 and 10.0 are 
+    the most important in directly writing to the residual stream. 
+    In all these heads, END attends strongly to the IO.
+        * These heads must be copying IO to END and using it for the next token prediction.
+    * By activation patching on resid_pre, attn_out (queries, keys, values, patterns) and mlp_out, 
+    we have seen a cluster of heads in layers 7 and 8 (7.3, 7.9, 8.6, 8.10) which move information from S2 to END.
+    This information must be how heads 9.6, 9.9 and 9.10 must be figuring out to attend to IO instead of S2.
+    * There's a cluster of early heads 3.0, 5.5, 6.9 whose query vectors seems to be important.
+        * Attention pattern of 3.0 indicates it's detecting duplicate names. So, in S2 it will store the information
+        that the subject is a duplicate.
+    """
+)
 
 st.header("Path Patching")
 
