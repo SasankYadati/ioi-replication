@@ -6,6 +6,54 @@ st.caption("We find a circuit in GPT-2 small that performs the Indirect Object I
 st.markdown("[Original paper](https://arxiv.org/pdf/2211.00593)")
 st.markdown("[Reference](https://arena3-chapter1-transformer-interp.streamlit.app/[1.4.1]_Indirect_Object_Identification)")
 
+st.header("Paper Summary")
+st.markdown(
+    """
+    Indirect Object Identification (IOI) is the grammatical task where entences such as 
+    “When Mary and John went to the store, John gave a drink to”
+    should be completed with “Mary” and not "John".
+    There are two clauses, where the initial clause introduces the indirect object (IO) "Mary"
+    and the subject (S1) "John" and the next clause refers to the subject (S2) for the second time.
+
+    The authors discover a circuit of 26 attention heads that (mostly) performs this task. 
+    These heads are grouped into 7 categories.
+    Notation:
+    * S1 - token position of subject 1
+    * IO - token position of the indirect object
+    * S2 - token position of the second occurrence of the subject
+    * END - final token position
+    """
+)
+
+st.image("ioi_circuit.png")
+st.markdown(
+    """
+    The identified circuit does the following:
+    1. Identify repeated names.
+        * Duplicate token heads attend from S2 to S1 and signal token duplication.
+        * Induction heads also do this with the help of previous token heads.
+        * Both classes of heads write duplicate token information to the residual stream at S2.
+    2. Remove the names that are duplicated.
+        * S-inhibition heads attend from END to S2 and affect the query of the Name Mover heads,
+        inhibiting their attention to S1 and S2 tokens.
+        * Induction heads, and duplicate token heads already computed the feature "John is repeated" and
+        stored it at S2.
+        * S-inhibition heads move this feature from S2 to END, and use this feature to inhibit the name
+        mover heads from attending to S1.
+    3. Output the remaining name.
+        * Name Mover heads attend to the non-repeated names and predict that these come next.
+        * They know not to attend to S1 or S2 because of query-composition with S-inhibition heads.
+    """
+)
+
+
+
+st.markdown(
+    """
+    The paper primarily uses activation patching and path patching to identify and validate the circuit.
+    """
+)
+
 st.header("Setup")
 
 st.subheader("Load GPT-2 small")
